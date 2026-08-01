@@ -1,0 +1,131 @@
+"""
+Logistic Regression from Scratch
+---------------------------------
+Implements binary classification using logistic regression, trained with
+batch gradient descent. Applied to a student admissions dataset (two exam
+scores predicting admission decision).
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+
+def sigmoid(z):
+    """
+    Compute the sigmoid of z.
+    """
+    return 1 / (1 + np.exp(-z))
+
+
+def compute_cost(X, y, w, b):
+    """
+    Compute the logistic regression cost (binary cross-entropy).
+    """
+    m = X.shape[0]
+    z = np.dot(X, w) + b
+    f_wb = sigmoid(z)
+
+    cost = -y * np.log(f_wb) - (1 - y) * np.log(1 - f_wb)
+    total_cost = np.sum(cost) / m
+    return total_cost
+
+
+def compute_gradient(X, y, w, b):
+    """
+    Compute the gradient of the cost function w.r.t. w and b.
+    """
+    m = X.shape[0]
+    z = np.dot(X, w) + b
+    f_wb = sigmoid(z)
+
+    error = f_wb - y
+    dj_dw = np.dot(X.T, error) / m
+    dj_db = np.sum(error) / m
+
+    return dj_db, dj_dw
+
+
+def gradient_descent(X, y, w_in, b_in, alpha, num_iters):
+    """
+    Run batch gradient descent to learn w and b.
+    """
+    w = w_in.copy()
+    b = b_in
+    J_history = []
+
+    for i in range(num_iters):
+        dj_db, dj_dw = compute_gradient(X, y, w, b)
+        w -= alpha * dj_dw
+        b -= alpha * dj_db
+
+        cost = compute_cost(X, y, w, b)
+        J_history.append(cost)
+
+        if i % math.ceil(num_iters / 10) == 0 or i == num_iters - 1:
+            print(f"Iteration {i:5}: Cost {cost:8.4f}")
+
+    return w, b, J_history
+
+
+def predict(X, w, b):
+    """
+    Predict binary class labels using the trained model.
+    """
+    probabilities = sigmoid(np.dot(X, w) + b)
+    return (probabilities >= 0.5).astype(int)
+
+
+def load_data(path):
+    """
+    Load a comma-separated dataset where the last column is the label.
+    """
+    data = np.loadtxt(path, delimiter=',')
+    X = data[:, :-1]
+    y = data[:, -1]
+    return X, y
+
+
+def plot_decision_boundary(X, y, w, b):
+    """
+    Plot the training data and the learned decision boundary.
+    Assumes X has exactly 2 features.
+    """
+    admitted = X[y == 1]
+    rejected = X[y == 0]
+
+    plt.scatter(admitted[:, 0], admitted[:, 1], marker='+', label='Admitted')
+    plt.scatter(rejected[:, 0], rejected[:, 1], marker='o', label='Not admitted')
+
+    x1 = np.array([np.min(X[:, 0]), np.max(X[:, 0])])
+    x2 = -(w[0] * x1 + b) / w[1]
+    plt.plot(x1, x2, label='Decision boundary')
+
+    plt.xlabel('Exam 1 score')
+    plt.ylabel('Exam 2 score')
+    plt.legend(loc='upper right')
+    plt.show()
+
+
+if __name__ == "__main__":
+    X_train, y_train = load_data("data/ex2data1.txt")
+
+    m, n = X_train.shape
+    print(f"Loaded {m} training examples with {n} features.")
+
+    np.random.seed(1)
+    initial_w = 0.01 * (np.random.rand(n) - 0.5)
+    initial_b = -8.0
+
+    alpha = 0.001
+    iterations = 10000
+
+    w, b, J_history = gradient_descent(
+        X_train, y_train, initial_w, initial_b, alpha, iterations
+    )
+
+    predictions = predict(X_train, w, b)
+    accuracy = np.mean(predictions == y_train) * 100
+    print(f"\nTraining accuracy: {accuracy:.2f}%")
+
+    plot_decision_boundary(X_train, y_train, w, b)
